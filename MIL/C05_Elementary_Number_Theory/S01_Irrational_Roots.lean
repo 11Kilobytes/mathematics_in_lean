@@ -52,9 +52,8 @@ example (a b c : Nat) (h : a * b = a * c) (h' : a ≠ 0) : b = c :=
 example {m n : ℕ} (coprime_mn : m.Coprime n) : m ^ 2 ≠ 2 * n ^ 2 := by
   intro sqr_eq
   have : 2 ∣ m := by
-    apply Nat.prime_two.dvd_of_dvd_pow
-    rw [sqr_eq]
-    apply dvd_mul_right
+    have : 2 ∣ m ^ 2 := by rw [sqr_eq]; apply dvd_mul_right
+    apply Nat.prime_two.dvd_of_dvd_pow this
 
   obtain ⟨k, meq⟩ := dvd_iff_exists_eq_mul_left.mp this
   have : 2 * (2 * k ^ 2) = 2 * n ^ 2 := by
@@ -65,9 +64,9 @@ example {m n : ℕ} (coprime_mn : m.Coprime n) : m ^ 2 ≠ 2 * n ^ 2 := by
     . exact h
     . contradiction
   have : 2 ∣ n := by
-    apply Nat.prime_two.dvd_of_dvd_pow
-    rw [←this]
-    apply dvd_mul_right
+    have : 2 ∣ n ^ 2 := by rw [←this]; apply dvd_mul_right
+    apply Nat.prime_two.dvd_of_dvd_pow this
+
   have : 2 ∣ m.gcd n := by
     apply (dvd_gcd_iff 2 m n).mpr; constructor <;> assumption
 
@@ -78,9 +77,8 @@ example {m n : ℕ} (coprime_mn : m.Coprime n) : m ^ 2 ≠ 2 * n ^ 2 := by
 example {m n p : ℕ} (coprime_mn : m.Coprime n) (prime_p : p.Prime) : m ^ 2 ≠ p * n ^ 2 := by
   intro sqr_eq
   have : p ∣ m := by
-    apply prime_p.dvd_of_dvd_pow
-    rw [sqr_eq]
-    apply dvd_mul_right
+    have : p ∣ m ^ 2 := by simp [sqr_eq]
+    apply prime_p.dvd_of_dvd_pow this
 
   obtain ⟨k, meq⟩ := dvd_iff_exists_eq_mul_left.mp this
   have : p * (p * k ^ 2) = p * n ^ 2 := by
