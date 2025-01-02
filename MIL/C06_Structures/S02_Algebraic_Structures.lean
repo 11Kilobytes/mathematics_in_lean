@@ -1,4 +1,4 @@
-import MIL.Common
+ import MIL.Common
 import Mathlib.Data.Real.Basic
 
 namespace C06S02
@@ -54,8 +54,14 @@ def permGroup {α : Type*} : Group₁ (Equiv.Perm α)
   inv_mul_cancel := Equiv.self_trans_symm
 
 structure AddGroup₁ (α : Type*) where
-  (add : α → α → α)
-  -- fill in the rest
+  add : α → α → α
+  zero : α
+  neg : α → α
+  add_assoc : ∀ x y z : α, add (add x y) z = add x (add y z)
+  zero_add : ∀ x : α, add zero x = x
+  add_zero : ∀ x : α, add x zero = x
+  neg_add_cancel : ∀ x : α, add (neg x) x = zero
+
 @[ext]
 structure Point where
   x : ℝ
@@ -67,11 +73,27 @@ namespace Point
 def add (a b : Point) : Point :=
   ⟨a.x + b.x, a.y + b.y, a.z + b.z⟩
 
-def neg (a : Point) : Point := sorry
+def neg (a : Point) : Point :=
+  ⟨-a.x, -a.y, -a.z⟩
 
-def zero : Point := sorry
+def zero : Point := ⟨0, 0, 0⟩
 
-def addGroupPoint : AddGroup₁ Point := sorry
+def addGroupPoint : AddGroup₁ Point where
+  add := add
+  neg := neg
+  zero := zero
+  add_assoc := by
+    intros; ext <;> dsimp only [add]
+    repeat' apply add_assoc
+  zero_add := by
+    intro; ext <;> dsimp only [zero, add]
+    repeat' apply zero_add
+  add_zero := by
+    intro; ext <;> dsimp only [zero, add]
+    repeat' apply add_zero
+  neg_add_cancel := by
+    intro; ext <;> dsimp only [neg, add, zero]
+    repeat' apply neg_add_cancel
 
 end Point
 
@@ -170,4 +192,36 @@ end
 
 class AddGroup₂ (α : Type*) where
   add : α → α → α
-  -- fill in the rest
+  zero : α
+  neg : α → α
+  add_assoc : ∀ x y z : α, add (add x y) z = add x (add y z)
+  zero_add : ∀ x : α, add zero x = x
+  add_zero : ∀ x : α, add x zero = x
+  neg_add_cancel : ∀ x : α, add (neg x) x = zero
+
+instance hasAddAddGroup₂ {α : Type*} [AddGroup₂ α] : Add α :=
+  ⟨AddGroup₂.add⟩
+
+instance hasNegAddGroup₂ {α : Type*} [AddGroup₂ α] : Neg α :=
+  ⟨AddGroup₂.neg⟩
+
+instance hasZeroAddGroup₂ {α : Type*} [AddGroup₂ α] : Zero α :=
+  ⟨AddGroup₂.zero⟩
+
+namespace Point
+instance : AddGroup₂ Point where
+  add := add
+  neg := neg
+  zero := zero
+  add_assoc := by
+    intros; ext <;> dsimp only [add]
+    repeat' apply add_assoc
+  zero_add := by
+    intro; ext <;> dsimp only [zero, add]
+    repeat' apply zero_add
+  add_zero := by
+    intro; ext <;> dsimp only [zero, add]
+    repeat' apply add_zero
+  neg_add_cancel := by
+    intro; ext <;> dsimp only [neg, add, zero]
+    repeat' apply neg_add_cancel
