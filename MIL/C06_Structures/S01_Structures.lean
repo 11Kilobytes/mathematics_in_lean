@@ -81,14 +81,14 @@ theorem addAlt_comm (a b : Point) : addAlt a b = addAlt b a := by
   repeat' apply add_comm
 
 protected theorem add_assoc (a b c : Point) : (a.add b).add c = a.add (b.add c) := by
-  sorry
+  simp [add, add_assoc]
 
 def smul (r : ℝ) (a : Point) : Point :=
-  sorry
+  Point.mk (r * a.x) (r * a.y) (r * a.z)
 
 theorem smul_distrib (r : ℝ) (a b : Point) :
     (smul r a).add (smul r b) = smul r (a.add b) := by
-  sorry
+  simp [smul, add]; ring; tauto
 
 end Point
 
@@ -126,9 +126,25 @@ def midpoint (a b : StandardTwoSimplex) : StandardTwoSimplex
   sum_eq := by field_simp; linarith [a.sum_eq, b.sum_eq]
 
 def weightedAverage (lambda : Real) (lambda_nonneg : 0 ≤ lambda) (lambda_le : lambda ≤ 1)
-    (a b : StandardTwoSimplex) : StandardTwoSimplex :=
-  sorry
-
+    (a b : StandardTwoSimplex) : StandardTwoSimplex
+    where
+  x := (lambda * a.x) + ((1 - lambda) * b.x)
+  y := (lambda * a.y) + ((1 - lambda) * b.y)
+  z := (lambda * a.z) + ((1 - lambda) * b.z)
+  x_nonneg := add_nonneg (mul_nonneg lambda_nonneg a.x_nonneg)
+                         (mul_nonneg (by linarith) b.x_nonneg)
+  y_nonneg := add_nonneg (mul_nonneg lambda_nonneg a.y_nonneg)
+                         (mul_nonneg (by linarith) b.y_nonneg)
+  z_nonneg := add_nonneg (mul_nonneg lambda_nonneg a.z_nonneg)
+                         (mul_nonneg (by linarith) b.z_nonneg)
+  sum_eq := calc
+    (lambda * a.x) + ((1 - lambda) * b.x)
+      + ((lambda * a.y) + ((1 - lambda) * b.y))
+      + ((lambda * a.z) + ((1 - lambda) * b.z))
+      = lambda * (a.x + a.y + a.z) + (1 - lambda) * (b.x + b.y + b.z)
+        := by ring
+    _ = 1
+        := by rw [a.sum_eq, b.sum_eq]; linarith
 end
 
 end StandardTwoSimplex
@@ -154,6 +170,30 @@ def midpoint (n : ℕ) (a b : StandardSimplex n) : StandardSimplex n
     simp [div_eq_mul_inv, ← Finset.sum_mul, Finset.sum_add_distrib,
       a.sum_eq_one, b.sum_eq_one]
     field_simp
+
+def weightedAverage {n : ℕ} (s : ℝ) (s_nonneg : 0 ≤ s) (s_le : s ≤ 1)
+  (a b : StandardSimplex n) : StandardSimplex n
+    where
+  V i := s * a.V i + (1 - s) * b.V i
+  NonNeg := by
+    intro i
+    apply add_nonneg
+    . exact mul_nonneg s_nonneg (a.NonNeg i)
+    . apply mul_nonneg
+      . apply le_sub_iff_add_le.mpr
+        convert s_le
+        apply zero_add
+      . exact b.NonNeg i
+  sum_eq_one := calc
+    ∑ i : Fin n, (fun i ↦ s * a.V i + (1 - s) * b.V i) i
+    _ = s * (∑ i : Fin n, (fun i ↦ a.V i) i) + (1 - s) * (∑ i : Fin n, (fun i ↦ b.V i) i)
+        := by rw [Finset.sum_add_distrib]
+              dsimp only [Finset.sum]
+              rw [Multiset.sum_map_mul_left, Multiset.sum_map_mul_left]
+    _ = s * 1 + (1 - s) * 1
+        := by rw [a.sum_eq_one, b.sum_eq_one]
+    _ = 1
+        := by ring
 
 end StandardSimplex
 
