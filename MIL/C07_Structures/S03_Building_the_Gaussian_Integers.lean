@@ -177,9 +177,20 @@ theorem mod'_eq (a b : ℤ) : mod' a b = a - b * div' a b := by linarith [div'_a
 
 end Int
 
-theorem sq_add_sq_eq_zero {α : Type*} [Ring α] [LinearOrder α] [IsStrictOrderedRing α]
-    (x y : α) : x ^ 2 + y ^ 2 = 0 ↔ x = 0 ∧ y = 0 := by
-  sorry
+theorem sq_add_sq_eq_zero {α : Type*} [LinearOrderedRing α] (x y : α) :
+    x ^ 2 + y ^ 2 = 0 ↔ x = 0 ∧ y = 0 := by
+    constructor
+    . contrapose!
+      intro h
+      by_cases h' : y = 0
+      . rw [h']; simp; exact fun a ↦ h a h'
+      . have : x ^ 2 + y ^ 2 > 0
+        calc
+          x ^2 + y ^ 2 ≥ y ^ 2 := by simp; exact sq_nonneg x
+          _            > 0     := by exact pow_two_pos_of_ne_zero h'
+        rintro p; rw [p] at this; exact (lt_self_iff_false 0).mp this
+    . rintro ⟨rfl, rfl⟩; norm_num
+
 namespace GaussInt
 
 def norm (x : GaussInt) :=
@@ -187,13 +198,23 @@ def norm (x : GaussInt) :=
 
 @[simp]
 theorem norm_nonneg (x : GaussInt) : 0 ≤ norm x := by
-  sorry
+  rcases x with ⟨re, im⟩; dsimp only [norm]; positivity
+
 theorem norm_eq_zero (x : GaussInt) : norm x = 0 ↔ x = 0 := by
-  sorry
+  rcases x with ⟨re, im⟩; dsimp only [norm]; rw [sq_add_sq_eq_zero re im]
+  constructor
+  . rintro ⟨h₁, h₂⟩; ext <;> simpa
+  . rintro p; exact ⟨congrArg GaussInt.re p, congrArg GaussInt.im p⟩
+
 theorem norm_pos (x : GaussInt) : 0 < norm x ↔ x ≠ 0 := by
-  sorry
+  rw [lt_iff_le_and_ne]; constructor
+  . rintro ⟨_, h⟩; contrapose! h; symm; exact (norm_eq_zero x).mpr h
+  . intro xne0; exact ⟨norm_nonneg x,
+          fun xnorm0 ↦ xne0 ((norm_eq_zero x).mp xnorm0.symm)⟩
+
 theorem norm_mul (x y : GaussInt) : norm (x * y) = norm x * norm y := by
-  sorry
+  dsimp [norm]; ring
+
 def conj (x : GaussInt) : GaussInt :=
   ⟨x.re, -x.im⟩
 
@@ -262,7 +283,7 @@ instance : EuclideanDomain GaussInt :=
     quotient := (· / ·)
     remainder := (· % ·)
     quotient_mul_add_remainder_eq :=
-      fun x y ↦ by rw [mod_def, add_comm] ; ring
+      fun x y ↦ by dsimp at *; rw [mod_def] ; ring
     quotient_zero := fun x ↦ by
       simp [div_def, norm, Int.div']
       rfl
