@@ -119,13 +119,14 @@ example {M : Type} [Monoid₁ M] {a b c : M} (hba : b ⋄ a = 𝟙) (hac : a ⋄
 
 
 lemma inv_eq_of_dia [Group₁ G] {a b : G} (h : a ⋄ b = 𝟙) : a⁻¹ = b :=
-  sorry
+  left_inv_eq_right_inv₁ (inv_dia a) h
 
-lemma dia_inv [Group₁ G] (a : G) : a ⋄ a⁻¹ = 𝟙 :=
-  sorry
-
-
-
+lemma dia_inv [Group₁ G] (a : G) : a ⋄ a⁻¹ = 𝟙 := by
+  have : ((a⁻¹)⁻¹ ⋄ a⁻¹) ⋄ (a ⋄ a⁻¹) = 𝟙
+  . rw [←dia_assoc, dia_assoc a⁻¹⁻¹, inv_dia, dia_one, inv_dia]
+  have : ((a⁻¹)⁻¹ ⋄ a⁻¹)⁻¹ = a ⋄ a⁻¹ := inv_eq_of_dia this
+  calc a ⋄ a⁻¹ = ((a⁻¹)⁻¹ ⋄ a⁻¹)⁻¹ := by rw [this]
+       _       = 𝟙                 := by rw [inv_dia, inv_eq_of_dia (one_dia 𝟙)]
 
 class AddSemigroup₃ (α : Type) extends Add α where
   /-- Addition is associative -/
@@ -140,6 +141,7 @@ class AddMonoid₃ (α : Type) extends AddSemigroup₃ α, AddZeroClass α
 
 @[to_additive AddMonoid₃]
 class Monoid₃ (α : Type) extends Semigroup₃ α, MulOneClass α
+attribute [to_additive existing] Monoid₃.toMulOneClass
 
 export Semigroup₃ (mul_assoc₃)
 export AddSemigroup₃ (add_assoc₃)
@@ -173,24 +175,38 @@ class Group₃ (G : Type) extends Monoid₃ G, Inv G where
 
 attribute [simp] Group₃.inv_mul AddGroup₃.neg_add
 
-
+export Group₃ (inv_mul)
 
 @[to_additive]
 lemma inv_eq_of_mul [Group₃ G] {a b : G} (h : a * b = 1) : a⁻¹ = b :=
-  sorry
+  left_inv_eq_right_inv' (inv_mul a) h
 
 
 @[to_additive (attr := simp)]
 lemma Group₃.mul_inv {G : Type} [Group₃ G] {a : G} : a * a⁻¹ = 1 := by
-  sorry
+  have : (a⁻¹⁻¹ * a⁻¹) * (a * a⁻¹) = 1
+  . rw [←mul_assoc₃, mul_assoc₃ a⁻¹⁻¹]; simp
+  calc a * a⁻¹ = (a⁻¹⁻¹ * a⁻¹)⁻¹ := by rw [inv_eq_of_mul this]
+       _       = 1⁻¹             := by rw [inv_mul]
+       _       = 1               := inv_eq_of_mul (one_mul 1)
 
 @[to_additive]
 lemma mul_left_cancel₃ {G : Type} [Group₃ G] {a b c : G} (h : a * b = a * c) : b = c := by
-  sorry
+  calc b = (a⁻¹ * a) * b := by rw [inv_mul, one_mul]
+       _ = a⁻¹ * (a * b) := by rw [mul_assoc₃]
+       _ = a⁻¹ * (a * c) := by rw [h]
+       _ = c             := by rw [←mul_assoc₃, inv_mul, one_mul]
+
 
 @[to_additive]
 lemma mul_right_cancel₃ {G : Type} [Group₃ G] {a b c : G} (h : b*a = c*a) : b = c := by
-  sorry
+  calc b = b * (a * a⁻¹) := by rw [Group₃.mul_inv, mul_one]
+       _ = c * (a * a⁻¹) := by rw [←mul_assoc₃ b, h, mul_assoc₃]
+       _ = c             := by rw [Group₃.mul_inv, mul_one]
+
+@[to_additive]
+lemma inv_inv_eq_self {G : Type} [Group₃ G] (a : G) : a⁻¹⁻¹ = a := by
+  apply inv_eq_of_mul; apply inv_mul
 
 class AddCommGroup₃ (G : Type) extends AddGroup₃ G, AddCommMonoid₃ G
 
@@ -205,9 +221,27 @@ class Ring₃ (R : Type) extends AddGroup₃ R, Monoid₃ R, MulZeroClass R wher
   /-- Multiplication is right distributive over addition -/
   right_distrib : ∀ a b c : R, (a + b) * c = a * c + b * c
 
+lemma neg_one_mul_eq_neg {R : Type} [Ring₃ R] (a : R) : (-1) * a = -a := by
+  symm; apply neg_eq_of_add
+  calc a + -1 * a = 1 * a + -1 * a := by congr; rw [one_mul]
+                _ = 0              := by rw [←Ring₃.right_distrib]; simp
+
+lemma neg_add_eq_neg_one_mul {R : Type} [Ring₃ R] (a b : R) : (-1) * (b + a) = -(a + b) := by
+  symm; apply neg_eq_of_add; rw [Ring₃.left_distrib];
+  rw [neg_one_mul_eq_neg b, neg_one_mul_eq_neg a]
+  rw [←add_assoc₃, add_assoc₃ a]; simp
+
 instance {R : Type} [Ring₃ R] : AddCommGroup₃ R :=
-{ add_comm := by
-    sorry }
+{ Ring₃.toAddGroup₃ with
+  add_comm := by
+    intro a b
+    have : (a + b) + -(b + a) = 0
+    . rw [←neg_one_mul_eq_neg, neg_add_eq_neg_one_mul]; simp
+    have : -(a + b) = -(b + a) := neg_eq_of_add this
+    calc a + b = - - (a + b) := (neg_neg_eq_self _).symm
+         _     = - - (b + a) := congrArg _ this
+         _     = b + a       := (neg_neg_eq_self _)
+}
 
 instance : Ring₃ ℤ where
   add := (· + ·)
@@ -232,14 +266,28 @@ class LE₁ (α : Type) where
   le : α → α → Prop
 
 @[inherit_doc] infix:50 " ≤₁ " => LE₁.le
+class Preorder₁ (α : Type) extends LE₁ α where
+  refl : ∀ x : α, x ≤₁ x
+  trans : ∀ x y z : α, x ≤₁ y → y ≤₁ z → x ≤₁ z
 
-class Preorder₁ (α : Type)
+class PartialOrder₁ (α : Type) extends Preorder₁ α where
+  antisymm : ∀ x y : α, x ≤₁ y → y ≤₁ x →  x = y
 
-class PartialOrder₁ (α : Type)
-
-class OrderedCommMonoid₁ (α : Type)
+class OrderedCommMonoid₁ (α : Type) extends PartialOrder₁ α, CommMonoid₃ α where
+  mul_le_mul_left : ∀ x y : α, x ≤₁ y → ∀ c : α, c * x ≤₁ c * y
 
 instance : OrderedCommMonoid₁ ℕ where
+  le := (· ≤ ·)
+  refl := le_refl
+  trans := fun _ _ _ ↦  le_trans
+  antisymm := fun _ _ ↦  le_antisymm
+  mul := (· * ·)
+  mul_assoc₃ := Nat.mul_assoc
+  one := 1
+  one_mul := one_mul
+  mul_one := mul_one
+  mul_comm := mul_comm
+  mul_le_mul_left := fun _ _ h c ↦ Nat.mul_le_mul_left c h
 
 class SMul₃ (α : Type) (β : Type) where
   /-- Scalar multiplication -/
