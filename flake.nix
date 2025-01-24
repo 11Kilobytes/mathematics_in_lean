@@ -15,7 +15,7 @@
         pkgs = nixpkgs.legacyPackages.${system};
       in
       {
-        devShells.default = pkgs.mkShell { packages = [ pkgs.elan ]; };
+        devShells.default = pkgs.mkShell { packages = [ pkgs.elan pkgs.neovim pkgs.fzf ]; };
       }
     );
 }
