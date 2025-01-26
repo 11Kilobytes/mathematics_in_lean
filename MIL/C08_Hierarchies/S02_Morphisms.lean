@@ -105,13 +105,26 @@ structure OrderPresHom (α β : Type) [LE α] [LE β] where
 structure OrderPresMonoidHom (M N : Type) [Monoid M] [LE M] [Monoid N] [LE N] extends
 MonoidHom₁ M N, OrderPresHom M N
 
-class OrderPresHomClass (F : Type) (α β : outParam Type) [LE α] [LE β]
+class OrderPresHomClass (F : Type) (α β : outParam Type) [LE α] [LE β] extends
+    DFunLike F α (fun _ ↦ β) where
+  map_le : ∀ (f : F) a a', a ≤ a' → f a ≤ f a'
+
 
 instance (α β : Type) [LE α] [LE β] : OrderPresHomClass (OrderPresHom α β) α β where
+  map_le := OrderPresHom.le_of_le
+  coe_injective' _ _ := OrderPresHom.ext
 
 instance (α β : Type) [LE α] [Monoid α] [LE β] [Monoid β] :
     OrderPresHomClass (OrderPresMonoidHom α β) α β where
+      coe f := f.toOrderPresHom.toFun
+      coe_injective' _ _ := OrderPresMonoidHom.ext
+      map_le f := f.le_of_le
+
 
 instance (α β : Type) [LE α] [Monoid α] [LE β] [Monoid β] :
     MonoidHomClass₃ (OrderPresMonoidHom α β) α β
-  := sorry
+  where
+    coe f := f.toMonoidHom₁.toFun
+    coe_injective' _ _:= OrderPresMonoidHom.ext
+    map_one f := f.map_one
+    map_mul f := f.map_mul
