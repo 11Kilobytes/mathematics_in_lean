@@ -52,6 +52,17 @@ instance [Monoid M] : SubmonoidClass₁ (Submonoid₁ M) M where
   mul_mem := Submonoid₁.mul_mem
   one_mem := Submonoid₁.one_mem
 
+@[ext]
+class Subgroup₁ (G : Type) [Group G] extends Submonoid₁ G where
+  mem_inv : ∀ {a : G}, a ∈ carrier → a⁻¹ ∈ carrier
+
+instance [Group G] : SetLike (Subgroup₁ G) G where
+  coe H := H.toSubmonoid₁.carrier
+  coe_injective' _ _ := Subgroup₁.ext
+
+instance [Group G] : SubmonoidClass₁ (Subgroup₁ G) G where
+  mul_mem s := s.toSubmonoid₁.mul_mem
+  one_mem s := s.toSubmonoid₁.one_mem
 
 instance [Monoid M] : Min (Submonoid₁ M) :=
   ⟨fun S₁ S₂ ↦
@@ -69,7 +80,12 @@ def Submonoid.Setoid [CommMonoid M] (N : Submonoid M) : Setoid M  where
     refl := fun x ↦ ⟨1, N.one_mem, 1, N.one_mem, rfl⟩
     symm := fun ⟨w, hw, z, hz, h⟩ ↦ ⟨z, hz, w, hw, h.symm⟩
     trans := by
-      sorry
+      rintro x y z ⟨w₁, w₁n, z₁, z₁n, p⟩ ⟨w₂, w₂n, z₂, z₂n, q⟩
+      use w₁ * w₂; constructor; exact N.mul_mem w₁n w₂n
+      . use z₁ * z₂; constructor; exact N.mul_mem z₁n z₂n
+        calc x * (w₁ * w₂) = y * (z₁ * w₂) := by rw [←mul_assoc x, p, mul_assoc]
+            _              = y * (w₂ * z₁) := by rw [mul_comm z₁]
+            _              = z * (z₁ * z₂) := by rw [←mul_assoc, q, mul_assoc, mul_comm z₂]
   }
 
 instance [CommMonoid M] : HasQuotient M (Submonoid M) where
@@ -78,13 +94,21 @@ instance [CommMonoid M] : HasQuotient M (Submonoid M) where
 def QuotientMonoid.mk [CommMonoid M] (N : Submonoid M) : M → M ⧸ N := Quotient.mk N.Setoid
 
 instance [CommMonoid M] (N : Submonoid M) : Monoid (M ⧸ N) where
-  mul := Quotient.map₂ (· * ·) (by
-      sorry
+  mul := Quotient.map₂' (· * ·) (by
+      rintro x₁ x₂ ⟨wx, wxn, zx, zxn, p⟩ y₁ y₂ ⟨wy, wyn, zy, zyn, q⟩
+      refine ⟨wx * wy, N.mul_mem wxn wyn, zx * zy, N.mul_mem zxn zyn, ?_⟩
+      dsimp
+      rw [mul_comm x₁, mul_assoc y₁, ← mul_assoc x₁, p, mul_comm y₁]
+      rw [mul_assoc x₂, mul_assoc x₂, mul_assoc zx, mul_comm wy, q]
+      rw [mul_comm zx, mul_assoc, mul_comm zy, mul_assoc]
         )
   mul_assoc := by
-      sorry
+    rintro ⟨a⟩ ⟨b⟩ ⟨c⟩; apply Quotient.eq.mpr; dsimp
+    rw [mul_assoc]
   one := QuotientMonoid.mk N 1
   one_mul := by
-      sorry
+      rintro ⟨a⟩; apply Quotient.eq.mpr; dsimp
+      rw [one_mul]
   mul_one := by
-      sorry
+      rintro ⟨a⟩; apply Quotient.eq.mpr; dsimp
+      rw [mul_one]
