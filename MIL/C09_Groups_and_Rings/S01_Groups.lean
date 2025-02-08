@@ -86,13 +86,15 @@ def conjugate {G : Type*} [Group G] (x : G) (H : Subgroup G) : Subgroup G where
   carrier := {a : G | ∃ h, h ∈ H ∧ a = x * h * x⁻¹}
   one_mem' := by
     dsimp
-    sorry
+    exact ⟨1, H.one_mem, by simp⟩
   inv_mem' := by
     dsimp
-    sorry
+    rintro x₁ ⟨h, hH, p⟩
+    exact ⟨h⁻¹, H.inv_mem hH, by rw [p]; group⟩
   mul_mem' := by
     dsimp
-    sorry
+    rintro a b ⟨ha, haH, pa⟩ ⟨hb, hbH, pb⟩
+    exact ⟨ha * hb, H.mul_mem haH hbH, by rw [pa, pb]; group⟩
 
 example {G H : Type*} [Group G] [Group H] (G' : Subgroup G) (f : G →* H) : Subgroup H :=
   Subgroup.map f G'
@@ -117,23 +119,41 @@ variable {G H : Type*} [Group G] [Group H]
 open Subgroup
 
 example (φ : G →* H) (S T : Subgroup H) (hST : S ≤ T) : comap φ S ≤ comap φ T := by
-  sorry
+  intro x hx
+  exact Subgroup.mem_comap.mpr (hST (Subgroup.mem_comap.mp hx))
+
 
 example (φ : G →* H) (S T : Subgroup G) (hST : S ≤ T) : map φ S ≤ map φ T := by
-  sorry
+  intro y hy
+  apply Subgroup.mem_map.mpr
+  rcases Subgroup.mem_map.mp hy with ⟨x, xS, p⟩
+  exact ⟨x, hST xS, p⟩
+
 
 variable {K : Type*} [Group K]
 
 -- Remember you can use the `ext` tactic to prove an equality of subgroups.
 example (φ : G →* H) (ψ : H →* K) (U : Subgroup K) :
     comap (ψ.comp φ) U = comap φ (comap ψ U) := by
-  sorry
+  ext x; constructor
+  . intro hx; simp at *; exact hx
+  . intro hx; simp at *; exact hx
+
 
 -- Pushing a subgroup along one homomorphism and then another is equal to
 -- pushing it forward along the composite of the homomorphisms.
 example (φ : G →* H) (ψ : H →* K) (S : Subgroup G) :
     map (ψ.comp φ) S = map ψ (S.map φ) := by
-  sorry
+  ext x; rw [Subgroup.mem_map]; constructor
+  . rintro ⟨a, aS, p⟩; rw [Subgroup.mem_map]
+    use φ a; constructor;
+    . apply Subgroup.mem_map.mpr; use a
+    . exact p
+  . rw [Subgroup.mem_map]; rintro ⟨a, a_in_φS, rfl⟩
+    rw [Subgroup.mem_map] at a_in_φS; rcases a_in_φS with ⟨y, yS, rfl⟩
+    exact ⟨y, yS, rfl⟩
+
+
 
 end exercises
 
